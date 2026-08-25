@@ -1,10 +1,15 @@
 from fastapi import FastAPI
+from slowapi.util import get_remote_address
+from config import API_SECRET
 from database import init_db,topic_exists,save_topic
 from blog_generator import generate_topic,generate_blog
 from blogger_client import publish
-from fastapi import HTTPException
+from fastapi import HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from bootstrap_credentials import create_google_files
+from slowapi import Limiter
+
+limiter=Limiter(key_func=get_remote_address)
 
 create_google_files()
 
@@ -24,8 +29,11 @@ init_db()
 def home():
     return {"message": "AI Blog Bot Running"}
 
-@app.get("/generate-and-publish")
-def create_blog():
+@app.post("/generate-and-publish")
+@limiter.limit("20/hour")
+def create_blog(x_api_key:str=Header(...)):
+    if x_api_key!=API_SECRET:
+        raise HTTPException(401,"Unauthorized")
     try:
         while True:
             title = generate_topic()

@@ -8,3 +8,4 @@ google-auth-httplib2
 markdown
 pydantic
 tenacity
+slowapi

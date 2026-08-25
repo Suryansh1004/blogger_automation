@@ -4,9 +4,6 @@ from config import BLOG_ID
 import os
 import base64
 
-if "BLOGGER_TOKEN" in os.environ:
-    with open("token.json","wb") as f:
-        f.write(base64.b64decode(os.environ["BLOGGER_TOKEN"]))
         
 SCOPES=["https://www.googleapis.com/auth/blogger"]
 
