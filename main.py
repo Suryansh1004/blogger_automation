@@ -24,7 +24,7 @@ init_db()
 def home():
     return {"message": "AI Blog Bot Running"}
 
-@app.post("/generate-and-publish")
+@app.get("/generate-and-publish")
 def create_blog():
     try:
         while True:
