@@ -2,6 +2,7 @@ fastapi
 uvicorn
 python-dotenv
 google-genai
+langsmith
 google-api-python-client
 google-auth-oauthlib
 google-auth-httplib2
@@ -10,3 +11,4 @@ pydantic
 tenacity
 slowapi
 limits
+deepagents

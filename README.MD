@@ -18,6 +18,7 @@ An automated blog publishing service that uses Google Gemini to generate SEO-fri
 
 - Python 3.12+
 - Google Gemini API key
+- LangSmith API key and prompt names (optional local fallbacks are used when names are not set)
 - Google Blogger API credentials
 - A Google Blogger blog ID
 
@@ -31,3 +32,14 @@ python3 -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
+
+Set these environment variables to use prompts managed in LangSmith:
+
+```dotenv
+LANGSMITH_TOPIC_PROMPT=your-topic-prompt-name
+LANGSMITH_BLOG_PROMPT=your-blog-prompt-name
+```
+
+The application accepts `LANGSMITH_API_KEY`, `LANGCHAIN_API_KEY`, or the existing
+lowercase `langsmith_api_key` variable. LangSmith tracing is enabled by default;
+set `LANGSMITH_TRACING=false` to disable it.

@@ -1,11 +1,20 @@
 from google import genai
-from config import GEMINI_API_KEY, GEMINI_MODEL
+from config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    LANGSMITH_API_KEY,
+    LANGSMITH_BLOG_PROMPT,
+    LANGSMITH_TOPIC_PROMPT,
+)
+from langsmith import Client, traceable
 import markdown
 import logging
 
 logger = logging.getLogger(__name__)
 client = genai.Client(api_key=GEMINI_API_KEY)
+langsmith_client = Client(api_key=LANGSMITH_API_KEY)
 
+@traceable(name="gemini.generate", run_type="llm")
 def ask_gemini(prompt: str) -> str:
     logger.debug("Sending prompt to Gemini model=%s", GEMINI_MODEL)
     try:
@@ -17,10 +26,23 @@ def ask_gemini(prompt: str) -> str:
         logger.error("Gemini request failed: %s", exc)
         raise
 
+def pull_prompt(prompt_name: str | None, fallback: str, **variables: str) -> str:
+    if not prompt_name:
+        logger.warning("LangSmith prompt name is not configured; using local fallback")
+        return fallback
+
+    logger.info("Pulling prompt from LangSmith name=%s", prompt_name)
+    try:
+        prompt = langsmith_client.pull_prompt(prompt_name)
+        return prompt.invoke(variables).to_string()
+    except Exception as exc:
+        logger.error("LangSmith prompt pull failed for %s: %s", prompt_name, exc)
+        raise
+
 def generate_topic():
     logger.info("Generating blog topic")
 
-    prompt = """
+    fallback = """
         You are the content strategist for a technical blog called BitCodeMatrix.
 
         Generate ONE unique, SEO-friendly blog title that has high Google search potential.
@@ -65,12 +87,13 @@ def generate_topic():
         - How Network Namespaces Work Inside Docker
         - Python Automation Scripts Every DevOps Engineer Should Know
         """
+    prompt = pull_prompt(LANGSMITH_TOPIC_PROMPT, fallback)
     return ask_gemini(prompt)
 
 def generate_blog(title):
     logger.info("Generating blog content")
 
-    prompt = f"""
+    fallback = f"""
         You are a Senior DevOps Engineer and Technical Writer writing for BitCodeMatrix.
 
         Write a comprehensive, original, SEO-optimized technical blog.
@@ -154,6 +177,7 @@ def generate_blog(title):
 
         Return the complete article in Markdown only.
         """
+    prompt = pull_prompt(LANGSMITH_BLOG_PROMPT, fallback, title=title)
     md = ask_gemini(prompt)
 
     html = markdown.markdown(

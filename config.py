@@ -8,6 +8,11 @@ logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY=os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL")
+
+os.environ.setdefault("LANGSMITH_API_KEY", os.getenv("LANGSMITH_API_KEY"))
+os.environ.setdefault("LANGSMITH_TRACING", os.getenv("LANGSMITH_TRACING"))
+LANGSMITH_TOPIC_PROMPT = os.getenv("LANGSMITH_TOPIC_PROMPT")
+LANGSMITH_BLOG_PROMPT = os.getenv("LANGSMITH_BLOG_PROMPT")
 BLOG_ID=os.getenv("BLOG_ID")
 API_SECRET=os.getenv("API_SECRET")
 
