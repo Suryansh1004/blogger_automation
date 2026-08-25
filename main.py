@@ -1,4 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from slowapi.errors import RateLimitExceeded
+from slowapi.extension import _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from config import API_SECRET
 from database import init_db,topic_exists,save_topic
@@ -23,6 +26,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 init_db()
 
 @app.get("/")
@@ -31,7 +38,11 @@ def home():
 
 @app.post("/generate-and-publish")
 @limiter.limit("20/hour")
-def create_blog(x_api_key:str=Header(...)):
+def create_blog(request: Request, x_api_key:str=Header(...)):
+    """
+    add x_api_key in header in postman as  - 
+    x-api-key: <your_api_key>
+    """
     if x_api_key!=API_SECRET:
         raise HTTPException(401,"Unauthorized")
     try:

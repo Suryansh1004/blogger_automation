@@ -9,3 +9,4 @@ markdown
 pydantic
 tenacity
 slowapi
+limits
