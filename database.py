@@ -21,6 +21,13 @@ def topic_exists(topic):
     logger.debug("Topic lookup completed: exists=%s", exists)
     return exists
 
+def get_previous_titles(limit=100):
+    with sqlite3.connect(DB) as conn:
+        rows = conn.execute(
+            "SELECT topic FROM posts ORDER BY id DESC LIMIT ?", (limit,)
+        ).fetchall()
+    return [row[0] for row in rows]
+
 def save_topic(topic):
     with sqlite3.connect(DB) as conn:
         conn.execute("INSERT INTO posts(topic) VALUES(?)", (topic,))

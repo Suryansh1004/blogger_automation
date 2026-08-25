@@ -9,9 +9,10 @@ from slowapi.extension import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from config import API_SECRET
-from database import init_db,topic_exists,save_topic
-from blog_generator import generate_topic,generate_blog
+from database import init_db,topic_exists,save_topic,get_previous_titles
+from blog_generator import choose_editorial_format,generate_topic,generate_blog
 from blogger_client import publish
+from news import fetch_ai_headlines
 from fastapi import HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from bootstrap_credentials import create_google_files
@@ -56,12 +57,14 @@ def create_blog(request: Request, x_api_key:str=Header(...)):
         raise HTTPException(401,"Unauthorized")
     try:
         logger.info("Starting blog generation and publishing workflow")
-        while True:
-            title = generate_topic()
-            if not topic_exists(title):
-                break
+        previous_titles = get_previous_titles()
+        headlines = fetch_ai_headlines()
+        editorial_format = choose_editorial_format()
+        title = generate_topic(previous_titles, headlines, editorial_format)
+        if topic_exists(title):
+            raise HTTPException(status_code=409, detail="Gemini generated an existing topic")
 
-        html = generate_blog(title)
+        html = generate_blog(title, editorial_format)
         url = publish(title, html)
         save_topic(title)
         logger.info("Blog generation and publishing workflow completed")

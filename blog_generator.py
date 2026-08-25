@@ -9,6 +9,8 @@ from config import (
 from langsmith import Client, traceable
 import markdown
 import logging
+import random
+import re
 
 logger = logging.getLogger(__name__)
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -39,88 +41,102 @@ def pull_prompt(prompt_name: str | None, fallback: str, **variables: str) -> str
         logger.error("LangSmith prompt pull failed for %s: %s", prompt_name, exc)
         raise
 
-def generate_topic():
-    logger.info("Generating blog topic")
+EDITORIAL_FORMATS = [
+    "Breaking News Analysis",
+    "Architecture Deep Dive",
+    "Research Breakdown",
+    "Tool Comparison",
+    "Industry Trends",
+    "Future Predictions",
+    "Engineering Case Study",
+]
 
-    fallback = """
-        You are the content strategist for a technical blog called BitCodeMatrix.
+BANNED_TITLE_PATTERNS = [
+    r"\boom\b", r"\bexecutor\b", r"memory tuning", r"linux commands?",
+    r"docker compose", r"\bkubectl\b", r"rolling update", r"troubleshooting",
+    r"\berror\b", r"\bfix(?:ing)?\b", r"\bhow to\b", r"\bwhat is\b",
+]
 
-        Generate ONE unique, SEO-friendly blog title that has high Google search potential.
+def choose_editorial_format() -> str:
+    return random.choice(EDITORIAL_FORMATS)
 
-        Primary categories (highest priority):
-        - DevOps
-        - Cloud Native
-        - Kubernetes
-        - Docker
-        - Linux Commands
-        - Networking
-        - Distributed Systems
-        - Python for DevOps
-        - Data Engineering
-        - Big Data
+def is_allowed_topic(title: str) -> bool:
+    return not any(
+        re.search(pattern, title, flags=re.IGNORECASE)
+        for pattern in BANNED_TITLE_PATTERNS
+    )
 
-        Secondary categories:
-        - Snowflake
-        - Redshift
-        - PySpark
-        - Data Warehousing
-        - Data Pipelines
-        - Istio
-        - Algorithms
-        - Data Structures
-        - Linux Administration
+def generate_topic(previous_titles=None, headlines=None, editorial_format=None):
+    logger.info("Generating editorial blog topic")
+    previous_titles = previous_titles or []
+    headlines = headlines or []
+    editorial_format = editorial_format or choose_editorial_format()
+    previous_title_text = "\n".join(f"- {title}" for title in previous_titles)
+    headline_text = "\n".join(f"- {headline}" for headline in headlines)
 
-        Rules:
-        - Choose ONE topic only.
-        - Prefer practical, production-oriented tutorials.
-        - Avoid generic beginner titles.
-        - Use long-tail keywords that people actually search.
-        - Make the title click-worthy without sounding like clickbait.
-        - Do not use quotation marks.
-        - Return ONLY the title.
+    fallback = f"""
+        You are the editor of the AI engineering publication BitCodeMatrix.
 
-        Examples of good titles:
-        - Kubernetes Rolling Updates Explained with Real Production Examples
-        - 25 Linux Commands Every DevOps Engineer Uses Daily
-        - Docker Multi-Stage Builds: Reduce Image Size by 80%
-        - Istio Traffic Routing Explained with Hands-On Examples
-        - How Network Namespaces Work Inside Docker
-        - Python Automation Scripts Every DevOps Engineer Should Know
+        Choose ONE fresh blog topic based on today's real headlines when available.
+        This must feel like an AI newsletter analysis, not an evergreen troubleshooting guide.
+
+        Today's headlines:
+        {headline_text or "- No feed headlines are available; choose a recent AI development."}
+
+        Already published titles:
+        {previous_title_text or "- None recorded yet."}
+
+        Content buckets: Breaking AI Releases (40%), AI Research (20%),
+        AI Engineering (20%), Data Engineering Trends (10%), Industry Analysis (10%).
+
+        Write the title as a {editorial_format}. Avoid anything semantically similar
+        to the published titles. Never generate Docker, Linux command, Kubernetes
+        troubleshooting, PySpark tuning, or OOM articles. Avoid tutorial framing,
+        generic beginner content, "How to", and "What is". Return ONLY the title.
         """
     prompt = pull_prompt(
         LANGSMITH_TOPIC_PROMPT,
         fallback,
-        question="Generate one unique SEO-friendly technical blog title.",
+        question=fallback,
+        previous_titles=previous_title_text,
+        headlines=headline_text,
+        editorial_format=editorial_format,
     )
-    return ask_gemini(prompt)
+    prompt = f"{prompt}\n\nMANDATORY EDITORIAL BRIEF:\n{fallback}"
 
-def generate_blog(title):
+    for attempt in range(3):
+        title = ask_gemini(prompt).strip().strip('"')
+        if is_allowed_topic(title):
+            return title
+        logger.warning("Rejected banned topic from Gemini (attempt %s/3)", attempt + 1)
+        prompt += "\nThe previous title violated the banned-topic rules. Generate a different title."
+
+    raise ValueError("Gemini did not produce an allowed editorial topic after 3 attempts")
+
+def generate_blog(title, editorial_format="Technical Analysis"):
     logger.info("Generating blog content")
 
     fallback = f"""
-        You are a Senior DevOps Engineer and Technical Writer writing for BitCodeMatrix.
+        You are a senior AI engineer and technical writer for BitCodeMatrix, an AI
+        engineering publication. Write an original article about the topic below.
 
-        Write a comprehensive, original, SEO-optimized technical blog.
+        Editorial format: {editorial_format}
 
         TITLE:
         {title}
 
         Audience:
-        - DevOps Engineers
-        - Platform Engineers
-        - Cloud Engineers
-        - SREs
-        - Backend Engineers
-        - Engineering students preparing for interviews
+        - AI and ML engineers
+        - Platform and data engineers building AI systems
+        - Engineering leaders evaluating AI platforms
 
         Word Count:
-        1500–2500 words
+        1200–2200 words
 
         Writing Style:
-        - Conversational but technical
-        - Production-focused
-        - Explain WHY, not just HOW
-        - Include practical examples
+        - Analytical, precise, and production-aware
+        - Explain what changed, why it matters, and what engineers should do next
+        - Distinguish confirmed facts from informed analysis
         - Avoid unnecessary marketing language
 
         Structure:
@@ -135,43 +151,24 @@ def generate_blog(title):
 
         4. Main Sections using H2 and H3 headings.
 
-        5. Practical Examples
-        - Linux commands
-        - Docker commands
-        - Kubernetes YAML
-        - Python snippets
-        - Bash scripts
-        - Networking diagrams (ASCII if needed)
+        5. Technical implications and practical engineering considerations
 
-        6. Common Mistakes
+        6. Limitations, open questions, and risks
 
-        7. Production Best Practices
+        7. Recommendations for engineering teams
 
-        8. Interview Questions (5–10)
-
-        9. FAQ (5–8 questions)
-
-        10. Conclusion
+        8. Conclusion
 
         Content Rules:
         - Use Markdown.
         - Include code blocks with proper language tags.
-        - Explain every command.
-        - Include performance and security considerations.
-        - Mention common troubleshooting steps.
+        - Include code or configuration only when it clarifies the AI engineering topic.
+        - Include performance, security, cost, and operational considerations where relevant.
         - Compare tools where relevant.
         - Never invent statistics unless clearly stated as an estimate.
         - Make the article feel like an experienced engineer wrote it.
 
-        When appropriate include:
-        - Docker Compose examples
-        - Kubernetes manifests
-        - Helm commands
-        - kubectl examples
-        - Linux CLI examples
-        - Networking commands (ping, traceroute, netstat, ss, tcpdump)
-        - Python automation scripts
-        - CI/CD examples (GitHub Actions or Jenkins)
+        - Do not turn the article into a generic Docker, Linux, Kubernetes, or PySpark tutorial.
 
         SEO Requirements:
         - Naturally repeat the primary keyword.
@@ -181,7 +178,13 @@ def generate_blog(title):
 
         Return the complete article in Markdown only.
         """
-    prompt = pull_prompt(LANGSMITH_BLOG_PROMPT, fallback, title=title)
+    prompt = pull_prompt(
+        LANGSMITH_BLOG_PROMPT,
+        fallback,
+        title=title,
+        editorial_format=editorial_format,
+    )
+    prompt = f"{prompt}\n\nMANDATORY ARTICLE BRIEF:\n{fallback}"
     md = ask_gemini(prompt)
 
     html = markdown.markdown(
