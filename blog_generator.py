@@ -87,7 +87,11 @@ def generate_topic():
         - How Network Namespaces Work Inside Docker
         - Python Automation Scripts Every DevOps Engineer Should Know
         """
-    prompt = pull_prompt(LANGSMITH_TOPIC_PROMPT, fallback)
+    prompt = pull_prompt(
+        LANGSMITH_TOPIC_PROMPT,
+        fallback,
+        question="Generate one unique SEO-friendly technical blog title.",
+    )
     return ask_gemini(prompt)
 
 def generate_blog(title):
