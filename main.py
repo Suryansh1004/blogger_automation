@@ -4,6 +4,9 @@ from blog_generator import generate_topic,generate_blog
 from blogger_client import publish
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from bootstrap_credentials import create_google_files
+
+create_google_files()
 
 app = FastAPI()
 
