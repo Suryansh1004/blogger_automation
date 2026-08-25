@@ -19,50 +19,146 @@ def ask_gemini(prompt: str) -> str:
 
 def generate_topic():
     logger.info("Generating blog topic")
+
     prompt = """
-        Generate ONE unique SEO-friendly blog title.
+        You are the content strategist for a technical blog called BitCodeMatrix.
 
-        Randomly choose from:
-        - AI
-        - Python
-        - Finance
-        - Productivity
-        - Fitness
-        - Technology
-        - Cybersecurity
-        - Travel
+        Generate ONE unique, SEO-friendly blog title that has high Google search potential.
 
-        Return ONLY the title.
-    """
-    title = ask_gemini(prompt)
-    logger.info("Generated blog topic")
-    return title
+        Primary categories (highest priority):
+        - DevOps
+        - Cloud Native
+        - Kubernetes
+        - Docker
+        - Linux Commands
+        - Networking
+        - Distributed Systems
+        - Python for DevOps
+        - Data Engineering
+        - Big Data
+
+        Secondary categories:
+        - Snowflake
+        - Redshift
+        - PySpark
+        - Data Warehousing
+        - Data Pipelines
+        - Istio
+        - Algorithms
+        - Data Structures
+        - Linux Administration
+
+        Rules:
+        - Choose ONE topic only.
+        - Prefer practical, production-oriented tutorials.
+        - Avoid generic beginner titles.
+        - Use long-tail keywords that people actually search.
+        - Make the title click-worthy without sounding like clickbait.
+        - Do not use quotation marks.
+        - Return ONLY the title.
+
+        Examples of good titles:
+        - Kubernetes Rolling Updates Explained with Real Production Examples
+        - 25 Linux Commands Every DevOps Engineer Uses Daily
+        - Docker Multi-Stage Builds: Reduce Image Size by 80%
+        - Istio Traffic Routing Explained with Hands-On Examples
+        - How Network Namespaces Work Inside Docker
+        - Python Automation Scripts Every DevOps Engineer Should Know
+        """
+    return ask_gemini(prompt)
 
 def generate_blog(title):
     logger.info("Generating blog content")
+
     prompt = f"""
-        Write a high-quality SEO blog.
+        You are a Senior DevOps Engineer and Technical Writer writing for BitCodeMatrix.
 
-        Title: {title}
+        Write a comprehensive, original, SEO-optimized technical blog.
 
-        Requirements:
-        - 1200–1800 words
-        - Human-sounding
-        - H1, H2, H3 headings
-        - Meta description
-        - Bullet lists
-        - FAQ section
-        - Conclusion
+        TITLE:
+        {title}
 
-        Return the response in Markdown.
-    """
+        Audience:
+        - DevOps Engineers
+        - Platform Engineers
+        - Cloud Engineers
+        - SREs
+        - Backend Engineers
+        - Engineering students preparing for interviews
 
+        Word Count:
+        1500–2500 words
+
+        Writing Style:
+        - Conversational but technical
+        - Production-focused
+        - Explain WHY, not just HOW
+        - Include practical examples
+        - Avoid unnecessary marketing language
+
+        Structure:
+
+        1. SEO Meta Description (150–160 characters)
+
+        2. Introduction
+        - Explain the real-world problem.
+        - Why engineers should care.
+
+        3. Table of Contents
+
+        4. Main Sections using H2 and H3 headings.
+
+        5. Practical Examples
+        - Linux commands
+        - Docker commands
+        - Kubernetes YAML
+        - Python snippets
+        - Bash scripts
+        - Networking diagrams (ASCII if needed)
+
+        6. Common Mistakes
+
+        7. Production Best Practices
+
+        8. Interview Questions (5–10)
+
+        9. FAQ (5–8 questions)
+
+        10. Conclusion
+
+        Content Rules:
+        - Use Markdown.
+        - Include code blocks with proper language tags.
+        - Explain every command.
+        - Include performance and security considerations.
+        - Mention common troubleshooting steps.
+        - Compare tools where relevant.
+        - Never invent statistics unless clearly stated as an estimate.
+        - Make the article feel like an experienced engineer wrote it.
+
+        When appropriate include:
+        - Docker Compose examples
+        - Kubernetes manifests
+        - Helm commands
+        - kubectl examples
+        - Linux CLI examples
+        - Networking commands (ping, traceroute, netstat, ss, tcpdump)
+        - Python automation scripts
+        - CI/CD examples (GitHub Actions or Jenkins)
+
+        SEO Requirements:
+        - Naturally repeat the primary keyword.
+        - Include related keywords.
+        - Use descriptive headings.
+        - Write for Google's Helpful Content guidelines.
+
+        Return the complete article in Markdown only.
+        """
     md = ask_gemini(prompt)
 
     html = markdown.markdown(
         md,
         extensions=["tables", "fenced_code"]
     )
-
     logger.info("Converted generated blog content to HTML")
     return html
