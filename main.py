@@ -1,3 +1,8 @@
+from logging_config import configure_logging
+
+configure_logging()
+
+import logging
 from fastapi import FastAPI, Request
 from slowapi.errors import RateLimitExceeded
 from slowapi.extension import _rate_limit_exceeded_handler
@@ -11,6 +16,8 @@ from fastapi import HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from bootstrap_credentials import create_google_files
 from slowapi import Limiter
+
+logger = logging.getLogger(__name__)
 
 limiter=Limiter(key_func=get_remote_address)
 
@@ -34,6 +41,7 @@ init_db()
 
 @app.get("/")
 def home():
+    logger.debug("Health check requested")
     return {"message": "AI Blog Bot Running"}
 
 @app.post("/generate-and-publish")
@@ -44,8 +52,10 @@ def create_blog(request: Request, x_api_key:str=Header(...)):
     x-api-key: <your_api_key>
     """
     if x_api_key!=API_SECRET:
+        logger.warning("Unauthorized blog generation request from %s", get_remote_address(request))
         raise HTTPException(401,"Unauthorized")
     try:
+        logger.info("Starting blog generation and publishing workflow")
         while True:
             title = generate_topic()
             if not topic_exists(title):
@@ -54,6 +64,7 @@ def create_blog(request: Request, x_api_key:str=Header(...)):
         html = generate_blog(title)
         url = publish(title, html)
         save_topic(title)
+        logger.info("Blog generation and publishing workflow completed")
 
         return {
             "status": "success",
@@ -61,5 +72,6 @@ def create_blog(request: Request, x_api_key:str=Header(...)):
             "url": url
         }
     except Exception as e:
+        logger.exception("Blog generation and publishing workflow failed")
         raise HTTPException(status_code=500, detail=str(e))
 

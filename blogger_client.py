@@ -3,25 +3,28 @@ from googleapiclient.discovery import build
 from config import BLOG_ID
 import os
 import base64
+import logging
 
-        
+logger = logging.getLogger(__name__)
 SCOPES=["https://www.googleapis.com/auth/blogger"]
 
 def get_service():
-
+    logger.debug("Loading Blogger authorization")
     creds=Credentials.from_authorized_user_file(
         "token.json",
         SCOPES
     )
 
-    return build(
+    service = build(
         "blogger",
         "v3",
         credentials=creds
     )
+    logger.debug("Blogger service initialized")
+    return service
 
 def publish(title,html):
-
+    logger.info("Publishing blog post")
     service=get_service()
 
     post={
@@ -29,10 +32,15 @@ def publish(title,html):
         "content":html
     }
 
-    result=service.posts().insert(
-        blogId=BLOG_ID,
-        body=post,
-        isDraft=False
-    ).execute()
+    try:
+        result=service.posts().insert(
+            blogId=BLOG_ID,
+            body=post,
+            isDraft=False
+        ).execute()
+    except Exception:
+        logger.exception("Blogger publish failed")
+        raise
 
+    logger.info("Blog post published successfully")
     return result["url"]

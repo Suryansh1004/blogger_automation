@@ -1,27 +1,27 @@
 import sqlite3
+import logging
 
 DB="blog.db"
+logger = logging.getLogger(__name__)
 
 def init_db():
-    conn=sqlite3.connect(DB)
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS posts(
-        id INTEGER PRIMARY KEY,
-        topic TEXT UNIQUE
-    )
-    """)
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB) as conn:
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS posts(
+            id INTEGER PRIMARY KEY,
+            topic TEXT UNIQUE
+        )
+        """)
+    logger.info("Database initialized: %s", DB)
 
 def topic_exists(topic):
-    conn=sqlite3.connect(DB)
-    cur=conn.execute("SELECT 1 FROM posts WHERE topic=?",(topic,))
-    found=cur.fetchone()
-    conn.close()
-    return found is not None
+    with sqlite3.connect(DB) as conn:
+        found = conn.execute("SELECT 1 FROM posts WHERE topic=?", (topic,)).fetchone()
+    exists = found is not None
+    logger.debug("Topic lookup completed: exists=%s", exists)
+    return exists
 
 def save_topic(topic):
-    conn=sqlite3.connect(DB)
-    conn.execute("INSERT INTO posts(topic) VALUES(?)",(topic,))
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB) as conn:
+        conn.execute("INSERT INTO posts(topic) VALUES(?)", (topic,))
+    logger.info("Saved generated topic")
